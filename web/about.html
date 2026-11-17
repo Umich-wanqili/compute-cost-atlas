@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Atlas Methods and Data</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { display: block; }
+    .doc { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; line-height: 1.55; }
+    .doc h1 { font-size: 24px; margin: 8px 0 4px; }
+    .doc h2 { font-size: 18px; margin: 32px 0 8px; }
+    .doc .lede { color: var(--ink-2); font-size: 15px; }
+    .doc table { border-collapse: collapse; width: 100%; font-size: 13px; margin: 8px 0; }
+    .doc th, .doc td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .doc .box { background: var(--panel); border-radius: 8px; padding: 12px 14px; }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <div class="preview-banner" role="note">Preview — not yet officially released. Numbers are provisional and may change.</div>
+  <header class="topbar">
+    <div class="brand"><strong>Compute Cost Atlas</strong><span class="tag">prototype v0.3</span></div>
+    <nav><a href="index.html">Map</a><a href="about.html" aria-current="page">About</a></nav>
+  </header>
+  <main class="doc" id="main">
+    <h1>About this atlas</h1>
+    <p class="lede">What would it cost to build and run an AI data center in each of the 3,144 US counties, and what does
+      that mean for the carbon and water behind every AI answer? This site lets you explore those numbers and change
+      the main assumptions yourself. It presents estimates; it does not recommend where data centers should or should
+      not be built.</p>
+    <p class="box"><b>Disclaimer.</b> Descriptive information, not a siting recommendation; associations are not causal
+      effects.</p>
+    <p class="box">Research prototype (v0.3), accompanying a working paper on where AI is not born equally: the cost of AI data centers across U.S. counties All parameters are provisional and under
+      review. Numbers may change.</p>
+
+    <h2 id="what">What the map shows</h2>
+    <table>
+      <tr><th>Metric</th><th>In plain words</th></tr>
+      <tr><td>10-year cost ($)</td><td>Cost of building a data center with 100 MW of computing load (adjustable) and running it for ten
+        years: construction, land, grid connection, natural-hazard allowance, electricity, a carbon price, water, staff and a
+        surcharge where water is scarce. Future costs are discounted at 5% per year. <b>It does not include the computers
+        themselves</b> (servers, GPUs), which cost about the same everywhere.</td></tr>
+      <tr><td>Cost Index</td><td>The 10-year cost divided by the national median, times 50. A county at 60 is 20% more
+        expensive than the typical county; at 40, 20% cheaper. It is not capped at 100.</td></tr>
+      <tr><td>Price per 1M tokens</td><td>A <b>cost-based</b> price: the typical market price of a million word-pieces
+        ("tokens") of AI output, plus the difference between this county's facility cost and the national median. It is
+        not what AI providers charge (their prices are set nationally). It mixes open-weight and closed models (slider) and
+        is shown with its difference from the national median. Location moves this price by only about 3%; the choice of
+        model moves it more than five-fold.</td></tr>
+      <tr><td>Percentile and uncertainty</td><td>Percentile 0 = cheapest county, 100 = most expensive. The uncertainty range
+        is the 5th–95th percentile of the county's position across 2,000 simulations in which seven uncertain assumptions
+        vary together (carbon price, water surcharge, construction cost, discount rate, staff, climate effect on cooling,
+        land price); it refers to the baseline scenario (air cooling, 100 MW).</td></tr>
+      <tr><td>CO₂ per 1M tokens</td><td>Emissions from the electricity used, at the average emission rate of the regional grid
+        (EPA eGRID 2023).</td></tr>
+      <tr><td>Scarcity-weighted water</td><td>Water evaporated for cooling on site plus water used by the power plants that
+        supply the electricity, weighted by how stressed local water resources are (WRI Aqueduct). 1 L-eq is one litre in a
+        county of median water stress; the same litre counts more where water is scarce.</td></tr>
+    </table>
+
+    <h2 id="themes">Themes</h2>
+    <ul>
+      <li><b>Cost</b>: 10-year cost, Cost Index and the main cost driver of each county.</li>
+      <li><b>Token footprint</b>: cost-based price, CO₂ and scarcity-weighted water per 1M tokens.</li>
+      <li><b>Cheap vs clean</b>: 3 × 3 maps of facility cost against CO₂ or water per token (national thirds).</li>
+      <li><b>Who bears it</b>: one campus as a share of the regional grid's electricity sales; how rankings change when the
+        social cost of carbon and a water shadow price are counted.</li>
+      <li><b>Context</b>: social vulnerability, household income and the 2024 presidential vote (two-party share). These are
+        <b>context, not causal</b>: they are not used in the cost model and do not explain its results. The vote layer is
+        shown for information only, in neutral (non-party) colours.</li>
+      <li><b>Confidence</b>: how much a county's position moves across 2,000 simulations of the uncertain assumptions.</li>
+    </ul>
+    <p><b>Change vs baseline</b> maps how the current slider settings move each county's cost (%) or percentile compared
+      with the baseline scenario. The optional <b>3D view</b> raises each county by the mapped value; use the flat map for
+      precise comparison, because perspective distorts heights and hides counties.</p>
+
+    <h2 id="controls">What the sliders change</h2>
+    <ul>
+      <li><b>Open-weight share</b>: share of tokens from open-weight models (cheaper, more energy-efficient on average) vs closed
+        frontier models. Baseline 30%.</li>
+      <li><b>Carbon price</b>: $ per tonne of CO₂ added to the electricity bill. Baseline $50; $190 is the US EPA (2023) estimate of
+        the social cost of carbon.</li>
+      <li><b>Cooling</b>: air/evaporative (baseline) or liquid cooling with dry coolers, which uses far less water and slightly
+        less energy but costs more to build.</li>
+      <li><b>Water-stress surcharge</b>: extra operating cost in water-stressed counties (0–50%; baseline 30% at the highest stress).</li>
+      <li><b>Campus size</b>: 10, 100 or 500 MW of computing load.</li>
+    </ul>
+    <p>Everything is recomputed in your browser for all counties. The calculations are a direct translation of the
+      research code (Python), checked to agree within 0.1% for every county.</p>
+
+    <h2 id="limits">Limitations</h2>
+    <ul>
+      <li>All parameters are provisional. Construction costs, land values (farmland prices are used as a lower bound) and the
+        grid connection cost are simplified national assumptions.</li>
+      <li>Electricity prices are average industrial prices from utilities serving each county (2022–24). Large data centers
+        often negotiate special rates that are not public.</li>
+      <li>Grid carbon uses regional average emission rates, not the extra (marginal) emissions a new load would cause.</li>
+      <li>Some inputs are estimated (Alaska and Hawaii climate; electricity prices set to the state average where local data are
+        missing or unrepresentative). The county profile flags these.</li>
+      <li>Water at power plants is estimated from published averages by fuel and cooling type; reservoir evaporation from
+        hydropower is excluded.</li>
+      <li>Data-center locations come from OpenStreetMap (PNNL IM3 atlas) and Epoch AI; both are incomplete.</li>
+      <li>The map colour scale is set by the lower 48 states and DC; Alaska and Hawaii values beyond it show the end colour
+        (in the paper, they have their own scales).</li>
+      <li>These are indicators for comparison, not forecasts of what any project will cost, and not causal estimates of impacts.</li>
+    </ul>
+
+    <h2 id="equivalents">Everyday equivalents</h2>
+    <p>The county profile translates one year of the campus into familiar units:</p>
+    <ul>
+      <li><b>US homes</b>: annual electricity of the campus ÷ 10,359 kWh, the average annual electricity use of a US
+        residential customer in 2024 (U.S. Energy Information Administration, Form EIA-861 2024: residential sales ÷
+        residential customers. The same calculation gives 10,791 kWh for 2022, the value in EIA's FAQ
+        <a href="https://www.eia.gov/tools/faqs/faq.php?id=97&amp;t=3">"How much electricity does an American home use?"</a>).</li>
+      <li><b>Olympic pools</b>: annual water ÷ 2,500 m³, the volume of a nominal Olympic pool (50 m × 25 m × 2 m).
+        Shown for on-site cooling water and for on-site plus power-plant water.</li>
+    </ul>
+
+    <h2 id="data">Data and licences</h2>
+    <p class="box"><b>Licences are provisional</b> (pending review).</p>
+    <table>
+      <tr><th>What</th><th>Files</th><th>Licence</th></tr>
+      <tr><td>Our model results (costs, Cost Index, token metrics, flags, uncertainty ranges)</td>
+        <td><code>counties_baseline.csv</code>, scenario CSVs from the map</td><td>CC BY 4.0 (provisional)</td></tr>
+      <tr><td>Data-center counts and operator classes derived from the PNNL IM3 atlas (OpenStreetMap)</td>
+        <td><code>counties_pnnl_odbl.csv</code>, <code>dc_pnnl.geojson</code></td><td>ODbL 1.0 — © OpenStreetMap contributors (kept in a separate file)</td></tr>
+      <tr><td>Frontier AI campuses</td><td><code>dc_epoch.geojson</code>; campus counts in the main CSV</td><td>CC BY 4.0 — Epoch AI</td></tr>
+      <tr><td>Code (model, site, analysis scripts)</td><td><code>LICENSE</code></td><td>MIT (provisional)</td></tr>
+    </table>
+    <p>Details: <a href="data/LICENSE-DATA.md">data/LICENSE-DATA.md</a>.</p>
+    <h3>Sources</h3>
+    <table>
+      <tr><th>Source</th><th>Used for</th><th>Licence</th></tr>
+      <tr><td>Natural Earth (1:50m land, lakes, country borders; 1:10m populated places)</td><td>Basemap context, city labels</td><td>Public domain</td></tr>
+      <tr><td>Census SAIPE 2023; FEMA National Risk Index (social vulnerability)</td><td>Context layers</td><td>Public domain</td></tr>
+      <tr><td>MIT Election Data and Science Lab, county presidential returns 2024</td><td>Context layer (information only)</td><td>Harvard Dataverse; licence to be verified</td></tr>
+      <tr><td>US EIA Form 861 2024 (average household use)</td><td>"US homes" equivalent</td><td>Public domain</td></tr>
+      <tr><td>US Census Bureau (county boundaries 2025; population, ACS 2023)</td><td>Map, population</td><td>Public domain</td></tr>
+      <tr><td>US EIA (Form 861 electricity sales 2022–24; Form 860 generators 2024)</td><td>Electricity price, power-plant cooling</td><td>Public domain</td></tr>
+      <tr><td>US EPA eGRID 2023</td><td>Grid emission rates, generation mix</td><td>Public domain</td></tr>
+      <tr><td>NOAA nClimDiv 1991–2020 normals</td><td>Climate (cooling degree days)</td><td>Public domain</td></tr>
+      <tr><td>BLS QCEW and OEWS</td><td>Construction and operations wages</td><td>Public domain</td></tr>
+      <tr><td>FEMA National Risk Index</td><td>Natural-hazard allowance</td><td>Public domain</td></tr>
+      <tr><td>USDA NASS cash rents</td><td>Land value proxy</td><td>Public domain</td></tr>
+      <tr><td>WRI Aqueduct 4.0</td><td>Water stress</td><td>CC BY 4.0</td></tr>
+      <tr><td>NREL (Macknick et al. 2012)</td><td>Water use of power plants</td><td>Published factors</td></tr>
+      <tr><td>OpenRouter (model prices and usage, Nov 2026)</td><td>Token prices, open-weight share</td><td>Rankings data CC BY 4.0</td></tr>
+      <tr><td>PNNL IM3 Open Source Data Center Atlas (from OpenStreetMap)</td><td>Data-center layer, counts</td><td>ODbL 1.0 — © OpenStreetMap contributors</td></tr>
+      <tr><td>Epoch AI, Frontier Data Centers</td><td>Frontier AI campus layer</td><td>CC BY 4.0</td></tr>
+    </table>
+    <p><b>Downloads.</b> <a href="data/counties_baseline.csv" download>Baseline table</a> (CC BY 4.0) and the current
+      scenario from the map page contain our model results for every county. Data-center counts derived from the PNNL IM3
+      atlas are in a separate file, <a href="data/counties_pnnl_odbl.csv" download>counties_pnnl_odbl.csv</a>, under the
+      Open Database Licence (ODbL 1.0): keep the attribution "© OpenStreetMap contributors" and the ODbL terms when you
+      redistribute it. Frontier-campus counts come from Epoch AI (CC BY 4.0; credit Epoch AI).</p>
+
+    <h2 id="method">Method in brief</h2>
+    <p>For each county: construction cost per MW, adjusted for local construction wages, plus land, a hazard allowance and a
+      grid connection; plus ten years of electricity (energy use rises in hot climates through the cooling overhead, PUE),
+      carbon, water and staff, discounted at 5% per year. The token layer converts the facility cost into dollars per
+      megawatt-hour of computing and then into the cost of 1M tokens using published estimates of energy per token
+      (central: 550 Wh per 1M output tokens for closed frontier models, 150 Wh for open-weight models). Full methods,
+      sources and sensitivity analyses are in the working paper.</p>
+  </main>
+</body>
+</html>

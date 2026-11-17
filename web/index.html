@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Compute Cost Atlas</title>
+  <meta name="description" content="County-level cost, carbon and water of hosting an AI data center in the United States (research prototype v0.3).">
+  <link rel="stylesheet" href="vendor/maplibre-gl-4.7.1/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#controls">Skip to map settings</a>
+  <div class="preview-banner" role="note">Preview — not yet officially released. Numbers are provisional and may change.</div>
+  <header class="topbar">
+    <div class="brand">
+      <strong>Compute Cost Atlas</strong>
+      <span class="tag">prototype v0.3</span>
+    </div>
+    <nav>
+      <a href="index.html" aria-current="page">Map</a>
+      <a href="about.html">About</a>
+      <button id="toggle-controls" class="only-mobile" aria-expanded="false" aria-controls="controls">Settings</button>
+    </nav>
+  </header>
+
+  <main class="layout">
+    <aside id="controls" class="controls" aria-label="Map settings">
+      <section>
+        <label class="lbl" for="theme">Theme</label>
+        <select id="theme"></select>
+        <label class="lbl small" for="metric">Show on map</label>
+        <select id="metric"></select>
+        <fieldset id="vote-mode" class="seg vote-mode" hidden>
+          <legend>Election (information only)</legend>
+          <label><input type="radio" name="votemode" value="p2024" checked> 2024 presidential</label>
+          <label><input type="radio" name="votemode" value="m2026"> 2026 midterm (U.S. House)</label>
+          <label><input type="radio" name="votemode" value="change"> Change 2024 → 2026</label>
+        </fieldset>
+        <label class="check view-toggle"><input type="checkbox" id="diff-toggle"> Show change vs baseline</label>
+        <div class="seg diff-mode" id="diff-mode" hidden>
+          <label><input type="radio" name="diffmode" value="tcoPct" checked> 10-yr cost (%)</label>
+          <label><input type="radio" name="diffmode" value="rank"> Percentile (points)</label>
+        </div>
+        <label class="check view-toggle"><input type="checkbox" id="extrude-toggle"> 3D view (height = mapped value)</label>
+        <div id="legend" class="legend" aria-live="polite"></div>
+        <p id="explainer" class="explainer"></p>
+      </section>
+
+      <section>
+        <div class="lbl">Scenario</div>
+        <div class="presets" role="group" aria-label="Scenario presets">
+          <button data-preset="baseline" class="active">Baseline</button>
+          <button data-preset="carbon">High carbon price</button>
+          <button data-preset="liquid">Liquid cooling</button>
+        </div>
+
+        <label class="slider" for="openShare">Open-weight share of tokens <output id="openShare-out"></output>
+          <input type="range" id="openShare" min="0" max="100" step="1"></label>
+        <label class="slider" for="carbonPrice">Carbon price ($/t CO₂) <output id="carbonPrice-out"></output>
+          <input type="range" id="carbonPrice" min="0" max="190" step="5"></label>
+        <label class="slider" for="surchargeMax">Water-stress surcharge (max) <output id="surchargeMax-out"></output>
+          <input type="range" id="surchargeMax" min="0" max="50" step="1"></label>
+
+        <div class="lbl small">Cooling</div>
+        <div class="seg" role="radiogroup" aria-label="Cooling">
+          <label><input type="radio" name="cooling" value="air_evaporative" checked> Air / evaporative</label>
+          <label><input type="radio" name="cooling" value="liquid_dry_coolers"> Liquid / dry coolers</label>
+        </div>
+        <div class="lbl small">Campus size (IT load)</div>
+        <div class="seg" role="radiogroup" aria-label="Campus size">
+          <label><input type="radio" name="mw" value="10"> 10 MW</label>
+          <label><input type="radio" name="mw" value="100" checked> 100 MW</label>
+          <label><input type="radio" name="mw" value="500"> 500 MW</label>
+        </div>
+        <p id="scenario-summary" class="note"></p>
+      </section>
+
+      <section>
+        <div class="lbl">Layers</div>
+        <label class="check"><input type="checkbox" id="layer-pnnl"> Data centers (PNNL IM3 atlas)</label>
+        <label class="check"><input type="checkbox" id="layer-epoch"> Frontier AI campuses (Epoch AI)</label>
+        <div id="layer-legend" class="layer-legend" hidden></div>
+        <label class="check"><input type="checkbox" id="layer-cities"> Major cities (Natural Earth, US cities ≥ 250,000)</label>
+        <div class="lbl small">Go to</div>
+        <div class="seg jump">
+          <button data-jump="l48">Lower 48</button><button data-jump="ak">Alaska</button><button data-jump="hi">Hawaii</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="lbl">Data</div>
+        <button id="download-scenario" class="link-btn">Download current scenario (CSV)</button>
+        <a class="link-btn" href="data/counties_baseline.csv" download>Download baseline table (CSV, CC BY 4.0)</a>
+        <a class="link-btn" href="data/counties_pnnl_odbl.csv" download>Download data-center counts (CSV, ODbL)</a>
+        <p class="note">Licences (provisional) and sources: <a href="about.html#data">About &amp; methods</a>. Costs exclude IT hardware (servers, GPUs).</p>
+      </section>
+    </aside>
+
+    <div class="mapwrap">
+      <div id="map" role="region" aria-label="County map"></div>
+      <div class="search" role="search">
+        <input id="search" type="search" placeholder="Find a county, e.g. Loudoun VA" autocomplete="off"
+               aria-label="Find a county" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
+        <ul id="search-results" role="listbox" hidden></ul>
+      </div>
+      <div id="map-legend" class="map-legend" aria-hidden="true"></div>
+      <div id="tooltip" class="tooltip" hidden></div>
+      <div id="loading" class="loading">Loading 3,144 counties…</div>
+    </div>
+
+    <aside id="profile" class="profile" hidden aria-live="polite"></aside>
+  </main>
+
+  <section id="compare" class="compare" hidden aria-label="County comparison"></section>
+
+  <script src="vendor/maplibre-gl-4.7.1/maplibre-gl.js"></script>
+  <script src="model.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

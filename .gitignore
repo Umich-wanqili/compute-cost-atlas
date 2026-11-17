@@ -1,0 +1,16 @@
+# Publish ONLY the static web prototype (web/) plus repo metadata. Everything else in this folder stays local:
+# raw data (data/, external_data/), analysis code and outputs (src/, outputs/, docs/, tests/), notebooks, configs.
+# Whitelist approach: ignore everything at the top level, then re-include what the public repo needs.
+
+/*
+!/.gitignore
+!/README.md
+!/LICENSE
+!/.github/
+!/web/
+
+# never publish local caches or editor files, even inside web/
+**/__pycache__/
+**/.DS_Store
+**/Thumbs.db
+web/**/*.tmp

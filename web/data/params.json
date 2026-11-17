@@ -1,0 +1,211 @@
+{
+ "source": "src/config_baseline.yaml, src/config_tokens.yaml (exported by src/export_web_data.py)",
+ "baseline": {
+  "scale": {
+   "it_load_mw": 100,
+   "hours_per_year": 8760
+  },
+  "finance": {
+   "years": 10,
+   "discount_rate": 0.05,
+   "opex_delay_years": 0
+  },
+  "capex": {
+   "base_per_mw": 12000000,
+   "labor": {
+    "share_of_base": 0.12,
+    "column": "construction_annual_pay_avg",
+    "clip": [
+     0.6,
+     2.5
+    ]
+   },
+   "land": {
+    "acres_per_mw": 0.5,
+    "rent_column": "cropland_rent_per_acre",
+    "cap_rate": 0.03,
+    "industrial_premium": 1.0
+   },
+   "hazard": {
+    "civil_share": 0.15,
+    "max_premium": 0.3,
+    "column": "RISK_SCORE"
+   },
+   "grid_interconnection": 50000000
+  },
+  "pue": {
+   "base": 1.1,
+   "cdd_column": "cdd_normal",
+   "cdd_threshold": 1200,
+   "slope_per_1000_cdd": 0.15,
+   "max_uplift": 0.3,
+   "override_column": "pue_override"
+  },
+  "electricity": {
+   "price_column": "industrial_price_avg"
+  },
+  "carbon": {
+   "price_per_tonne": 50,
+   "rate_column": "grid_co2_rate_lb_per_mwh",
+   "lb_per_tonne": 2204.62
+  },
+  "water": {
+   "m3_per_mwh": 1.5,
+   "price_per_m3": 2.0,
+   "stress_penalty": {
+    "column": "bws_score",
+    "start_score": 3.0,
+    "full_score": 5.0,
+    "max_penalty": 0.3
+   }
+  },
+  "labor_opex": {
+   "staff": 100,
+   "wage_column": "ops_wage_composite",
+   "overhead_multiplier": 1.0
+  },
+  "cost_index": {
+   "median_value": 50
+  },
+  "cooling_scenarios": {
+   "air_evaporative": {
+    "pue_base": 1.1,
+    "pue_slope_per_1000_cdd": 0.15,
+    "pue_max_uplift": 0.3,
+    "water_m3_per_mwh": 1.5,
+    "capex_premium_per_mw": 0
+   },
+   "liquid_dry_coolers": {
+    "pue_base": 1.06,
+    "pue_slope_per_1000_cdd": 0.1,
+    "pue_max_uplift": 0.2,
+    "water_m3_per_mwh": 0.05,
+    "capex_premium_per_mw": 750000,
+    "capex_premium_range_per_mw": [
+     0,
+     2500000
+    ]
+   }
+  }
+ },
+ "tokens": {
+  "pricing": {
+   "blend_input_output": [
+    3,
+    1
+   ],
+   "open": {
+    "median_per_1M": 0.3625,
+    "usage_weighted_per_1M": 0.481,
+    "median_per_1M_output": 0.6512,
+    "usage_weighted_per_1M_output": 1.2502,
+    "range_per_1M": [
+     0.14,
+     0.75
+    ]
+   },
+   "closed": {
+    "median_per_1M": 2.0,
+    "usage_weighted_per_1M": 3.137,
+    "median_per_1M_output": 4.25,
+    "usage_weighted_per_1M_output": 7.8135,
+    "range_per_1M": [
+     0.69,
+     4.5
+    ]
+   },
+   "price_statistic": "median"
+  },
+  "mix": {
+   "open_share": 0.3,
+   "open_share_grid": [
+    0.0,
+    0.1,
+    0.2,
+    0.3,
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1.0
+   ],
+   "open_share_alternatives": {
+    "openrouter_current": 0.71
+   },
+   "note": "OpenRouter is a router: closed-model traffic that goes direct to OpenAI / Anthropic / Google APIs is not counted, so OpenRouter shares overstate the open share of the whole market."
+  },
+  "energy": {
+   "closed_frontier_wh_per_1M_out": {
+    "low": 200,
+    "central": 550,
+    "high": 1200
+   },
+   "open_typical_wh_per_1M_out": {
+    "low": 50,
+    "central": 150,
+    "high": 400
+   },
+   "input_token_energy_ratio": 0.1,
+   "input_token_energy_ratio_range": [
+    0.03,
+    0.2
+   ]
+  },
+  "energy_level": "central",
+  "facility_cost": {
+   "method": "levelized",
+   "utilization": 1.0,
+   "utilization_sensitivity": [
+    0.5,
+    0.7
+   ]
+  }
+ },
+ "water_scarcity_method": "pfister_wsi_normalized",
+ "web": {
+  "equivalents": {
+   "household_kwh_per_year": 10359,
+   "household_source": "U.S. EIA, Form EIA-861 (2024), average residential customer",
+   "olympic_pool_m3": 2500,
+   "olympic_pool_source": "Nominal Olympic swimming pool, 50 m x 25 m x 2 m = 2,500 m3"
+  },
+  "monte_carlo": {
+   "source": "outputs/tables/mc_county_air.csv",
+   "note": "5-95% interval of the county's national percentile across 2,000 Monte Carlo draws of 7 uncertain parameters (air cooling, 100 MW, baseline scenario)"
+  },
+  "licences": {
+   "model_outputs": "CC BY 4.0",
+   "code": "MIT",
+   "pnnl_derived": "ODbL 1.0",
+   "epoch_derived": "CC BY 4.0"
+  },
+  "basemap": {
+   "city_min_population": 250000,
+   "source": "Natural Earth 1:50m land, lakes, admin-0 countries; 1:10m populated places (naturalearthdata.com, public domain)"
+  }
+ },
+ "equity": {
+  "social_cost": {
+   "scc_per_tonne": 190,
+   "already_priced": "config_baseline carbon.price_per_tonne",
+   "water_shadow_price": {
+    "usd_per_m3_at_reference": 0.3,
+    "reference_cf": "california_median"
+   }
+  }
+ },
+ "election": {
+  "p2024": {
+   "race": "2024 presidential election",
+   "source": "MIT Election Data + Science Lab, county returns 2000-2024",
+   "status": "available"
+  },
+  "m2026": {
+   "race": "2026 midterm, U.S. House (county totals of district results; uncontested districts excluded and flagged)",
+   "source": "certified results via src/build_election_2026.py",
+   "status": "pending"
+  }
+ }
+}
