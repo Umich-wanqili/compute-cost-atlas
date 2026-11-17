@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Compute Cost Atlas</title>
-  <meta name="description" content="County-level cost, carbon and water of hosting an AI data center in the United States (research prototype v0.3).">
+  <meta name="description" content="County-level cost, carbon and water of hosting an AI data center in the United States (research preview v0.5).">
   <link rel="stylesheet" href="vendor/maplibre-gl-4.7.1/maplibre-gl.css">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -15,10 +15,11 @@
   <header class="topbar">
     <div class="brand">
       <strong>Compute Cost Atlas</strong>
-      <span class="tag">prototype v0.3</span>
+      <span class="tag">preview v0.5.1</span>
     </div>
     <nav>
       <a href="index.html" aria-current="page">Map</a>
+      <button id="open-guide" class="link-btn nav-btn" aria-label="Start here guide"><span class="long">Start here</span><span class="short">Guide</span></button>
       <a href="about.html">About</a>
       <button id="toggle-controls" class="only-mobile" aria-expanded="false" aria-controls="controls">Settings</button>
     </nav>
@@ -90,11 +91,14 @@
 
       <section>
         <div class="lbl">Data</div>
+        <button id="copy-link" class="link-btn">Copy link to this view</button>
+        <button id="download-map" class="link-btn">Download map image (PNG)</button>
         <button id="download-scenario" class="link-btn">Download current scenario (CSV)</button>
         <a class="link-btn" href="data/counties_baseline.csv" download>Download baseline table (CSV, CC BY 4.0)</a>
         <a class="link-btn" href="data/counties_pnnl_odbl.csv" download>Download data-center counts (CSV, ODbL)</a>
         <p class="note">Licences (provisional) and sources: <a href="about.html#data">About &amp; methods</a>. Costs exclude IT hardware (servers, GPUs).</p>
       </section>
+      <footer class="site-footer" id="site-footer"></footer>
     </aside>
 
     <div class="mapwrap">
@@ -106,6 +110,17 @@
       </div>
       <div id="map-legend" class="map-legend" aria-hidden="true"></div>
       <div id="tooltip" class="tooltip" hidden></div>
+      <div id="guide" class="guide" role="dialog" aria-modal="false" aria-labelledby="guide-title" hidden>
+        <h2 id="guide-title">Start here</h2>
+        <ol>
+          <li><b>Search your county</b> in the box at the top of the map, or click any county.</li>
+          <li><b>Read the card</b>: the 10-year cost of a data center there, what drives it, and what a campus would mean locally (electricity, water, carbon, land, jobs).</li>
+          <li><b>Try the sliders</b> under Scenario: carbon price, cooling type, campus size. Every county updates instantly.</li>
+        </ol>
+        <p class="note">Descriptive information, not a siting recommendation. Numbers are provisional.</p>
+        <button class="btn" id="guide-ok">Got it</button>
+      </div>
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
       <div id="loading" class="loading">Loading 3,144 counties…</div>
     </div>
 

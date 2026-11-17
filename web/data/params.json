@@ -184,6 +184,31 @@
   "basemap": {
    "city_min_population": 250000,
    "source": "Natural Earth 1:50m land, lakes, admin-0 countries; 1:10m populated places (naturalearthdata.com, public domain)"
+  },
+  "campus_questions": {
+   "car_t_co2_per_year": 4.6,
+   "car_source": "US EPA, Greenhouse Gas Equivalencies Calculator (typical passenger vehicle, 4.6 t CO2 per year)",
+   "football_field_acres": 1.32,
+   "football_source": "American football field including end zones, 360 x 160 ft = 1.32 acres",
+   "construction_jobs": 1688,
+   "construction_source": "US Chamber of Commerce Technology Engagement Center (2017), Data Centers: Jobs and Opportunities in Communities Nationwide (industry-sponsored)",
+   "ops_jobs_scale": "linear",
+   "residential_price_years": [
+    2014,
+    2024
+   ],
+   "cpi_u": {
+    "2014": 236.736,
+    "2024": 313.689
+   },
+   "cpi_source": "US Bureau of Labor Statistics, CPI-U all items, US city average, annual averages (series CUUR0000SA0)",
+   "not_covered": "Noise, tax revenue and local decision-making are not covered by this atlas."
+  },
+  "site": {
+   "version": "0.5.1",
+   "last_updated": "2026-11-17",
+   "citation": "Li, W. & Urban Information Lab, UT Austin. Compute Cost Atlas, preview v0.5.1, 2026.",
+   "feedback_url": "https://github.com/Umich-wanqili/compute-cost-atlas/issues"
   }
  },
  "equity": {

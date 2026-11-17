@@ -292,6 +292,72 @@
     return parts.length ? '<div class="lyr">' + parts.join(" · ") + "</div>" : "";
   }
 
+
+  // ---- hover card (v0.4) ----------------------------------------------------------------------------------------------
+  /* Aqueduct baseline water stress bands (bws_score 0-5): <1 low (<10% withdrawals/supply), 1-3 medium (10-40%),
+     3-4 high (40-80%), >=4 extremely high (>80% or arid & low use). Aqueduct's low-medium and medium-high are merged. */
+  function waterStressBand(score) {
+    if (score === null || !isFinite(score)) return "no data";
+    return score < 1 ? "Low" : score < 3 ? "Medium" : score < 4 ? "High" : "Extremely high";
+  }
+  function textOn(bg) {                           // dark or white text for a chip background (WCAG luminance)
+    var c = bg.indexOf("rgb") === 0 ? bg.match(/\d+/g).map(Number) : hexRgb(bg);
+    var l = c.map(function (x) { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+    return 0.2126 * l[0] + 0.7152 * l[1] + 0.0722 * l[2] > 0.22 ? "#1f1f1f" : "#ffffff";
+  }
+  function isBaseline() {
+    var s = state.scenario, b = CostModel.baselineScenario(params);
+    return ["mw", "carbonPrice", "surchargeMax", "cooling", "constructionPerMw", "staff", "discountRate", "landPremium"]
+      .every(function (k) { return s[k] === b[k]; });          // open-weight share does not change cost
+  }
+  var DRIVER_SHORT = { "Construction (labor-adjusted)": "Construction labor", "Water (incl. stress surcharge)": "Water stress",
+    "Operations labor": "Operations staff", "Hazard premium": "Natural hazards" };
+  function tooltipCard(i, docked) {
+    var o = state.out, d = o.driver[i], col = DRIVER_COLORS[d.driver];
+    var chipBg = d.side === "more expensive" ? col : lighten(col, 0.55);
+    var delta = "";
+    if (!isBaseline()) {
+      var dp = (o.tco[i] / state.base.tco[i] - 1) * 100;
+      delta = '<span class="tc-delta">' + (dp >= 0 ? "+" : "−") + Math.abs(dp).toFixed(1) + "% vs baseline</span>";
+    }
+    var pct = o.percentile[i];
+    // mini stats; the mapped metric (if not cost / index / driver) comes first, highlighted
+    var stats = [
+      { id: "price", k: "Electricity price", v: "$" + prep.price[i].toFixed(0) + " /MWh" },
+      { id: "co2Kg", k: "CO₂ per 1M tokens", v: o.co2Kg[i].toFixed(3) + " kg" },
+      { id: "water", k: "Water stress", v: waterStressBand(data.bws_score[i]) },
+      { id: "dc", k: "Data centers", v: data.n_dc_pnnl[i] + (data.n_epoch[i] ? " · " + data.n_epoch[i] + " frontier AI campus" + (data.n_epoch[i] > 1 ? "es" : "") : "") }
+    ];
+    var layer = state.diff ? "diff" : state.metric;
+    if (["tco", "costIndex", "driver"].indexOf(layer) < 0) {
+      var m = activeDef(), v = tooltipValue(i);
+      stats = stats.filter(function (st) { return st.id !== layer; });
+      if (stats.length > 3) {
+        var drop = ["vote", "svi", "income", "mcWidth"].indexOf(layer) >= 0 ? "co2Kg" : "price";
+        stats = stats.filter(function (st) { return st.id !== drop; });
+      }
+      stats.unshift({ id: layer, k: m.short.replace(/ \((kg|\$|\$ bn)\)$/, ""), v: v, hl: true });
+      stats = stats.slice(0, 4);
+    }
+    var flags = flagsOf(i);
+    return '<div class="tc-head"><b>' + esc(data.name[i]) + ", " + esc(data.state[i]) + '</b><span>Population ' +
+      fmtInt(data.population[i]) + "</span></div>" +
+      '<div class="tc-hero"><div><div class="tc-big">$' + (o.tco[i] / 1e9).toFixed(2) + ' bn</div><div class="tc-lab">10-yr cost' +
+      (delta ? " " + delta : "") + '</div></div><div><div class="tc-big">' + o.costIndex[i].toFixed(1) +
+      ' <span class="tc-unit">Cost Index</span></div><div class="tc-lab">percentile ' + pct.toFixed(0) + "</div></div></div>" +
+      '<div class="tc-pos" role="img" aria-label="Position among counties: percentile ' + pct.toFixed(0) + ' of 100, 0 = cheapest">' +
+      '<div class="tc-bar" style="background:linear-gradient(to right,' + DIVERGING.join(",") + ')"></div>' +
+      '<div class="tc-mark" style="left:' + pct.toFixed(1) + '%"></div><div class="tc-ends"><span>cheapest</span><span>most expensive</span></div></div>' +
+      '<div class="tc-chip" style="background:' + chipBg + ";color:" + textOn(chipBg) + '">Main driver: <b>' +
+      esc(DRIVER_SHORT[d.driver] || d.driver) + "</b> · " + (d.side === "more expensive" ? "raises" : "lowers") + "</div>" +
+      '<div class="tc-stats">' + stats.map(function (st) {
+        return '<div class="' + (st.hl ? "hl" : "") + '"><span>' + esc(st.k) + "</span><b>" + esc(st.v) + "</b></div>";
+      }).join("") + "</div>" +
+      (flags.length ? '<div class="tc-flag">ⓘ estimated inputs (' + flags.length + ")</div>" : "") +
+      (docked ? '<div class="tc-foot"><button class="btn" id="tc-open">Full profile</button><button class="tc-x" id="tc-close" aria-label="Close">×</button></div>'
+              : '<div class="tc-foot">Click for full profile →</div>');
+  }
+
   function tooltipValue(i) {
     var m = activeDef();
     if (m.kind === "cat") { var d = state.out.driver[i]; return d.driver + (d.side === "cheaper" ? " (lowers cost)" : " (raises cost)"); }
@@ -354,8 +420,9 @@
       '<div class="kpis">' +
       kpi("10-year cost", fmtMoney(o.tco[i]), "excl. IT hardware") +
       kpi("Cost Index", o.costIndex[i].toFixed(1), "percentile " + o.percentile[i].toFixed(0) + " (0 = cheapest)" +
-          '</div><div class="s" title="' + esc(params.web.monte_carlo.note) + '">uncertainty (5–95%, baseline): ' +
-          data.mc_rank_p5[i].toFixed(0) + "–" + data.mc_rank_p95[i].toFixed(0)) +
+          '</div><div class="s" title="' + esc(params.web.monte_carlo.note) + '">' + (isBaseline()
+            ? "uncertainty (5–95%): percentile " + data.mc_rank_p5[i].toFixed(0) + "–" + data.mc_rank_p95[i].toFixed(0)
+            : "Uncertainty interval available for the baseline scenario")) +
       kpi("Price per 1M tokens", "$" + o.priceL1[i].toFixed(2), pctVsMedian(o.priceL1[i]) +
           '</div><div class="s">facility $' + o.costPerItMwh[i].toFixed(0) + " per IT-MWh") +
       kpi("CO₂ per 1M tokens", o.co2Kg[i].toFixed(3) + " kg", "PUE " + o.pue[i].toFixed(2)) +
@@ -366,7 +433,7 @@
       "</b> (" + (d.deviation >= 0 ? "+" : "−") + fmtMoney(Math.abs(d.deviation)) + " vs that component's median).</div>" +
       '<p class="note">The token price is cost-based: the typical model price plus this county\'s facility-cost difference. ' +
       "It is not what AI providers charge, which is set nationally.</p>" +
-      "<h3>In everyday terms (one year of operation)</h3>" + equivalents(i) +
+      campusQuestions(i) +
       "<h3>Where the money goes</h3><div class=stack>" + stack + "</div><table class=breakdown>" + rows +
       "<tr><td><b>Total</b></td><td class=num><b>" + fmtMoney(total) + "</b></td><td></td></tr></table>" +
       "<h3>Context</h3><table class=breakdown>" +
@@ -389,12 +456,15 @@
       "</td></tr></table>" +
       "<h3>Data quality</h3>" + (flags.length ? '<ul class="flags">' + flags.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul>"
         : '<p class="note">All model inputs observed for this county.</p>') +
-      '<p><button class="btn" id="add-compare"' + (inCompare || state.compare.length >= 3 ? " disabled" : "") + ">" +
-      (inCompare ? "In comparison" : state.compare.length >= 3 ? "Compare is full (3)" : "Add to comparison") + "</button></p>" +
+      '<p class="prof-actions"><button class="btn" id="add-compare"' + (inCompare || state.compare.length >= 3 ? " disabled" : "") + ">" +
+      (inCompare ? "In comparison" : state.compare.length >= 3 ? "Compare is full (3)" : "Add to comparison") + "</button>" +
+      '<button class="btn" id="prof-link">Copy link</button><button class="btn" id="prof-png">Download card (PNG)</button></p>' +
       '<p class="disclaimer">Descriptive information, not a siting recommendation; associations are not causal effects. ' +
       "All parameters are provisional. <a href=\"about.html#limits\">Limitations</a></p>";
     el.hidden = false;
-    el.querySelector(".close").onclick = function () { el.hidden = true; select(null); };
+    el.querySelector(".close").onclick = function () { el.hidden = true; select(null); writeHash(); };
+    $("prof-link").onclick = copyLink;
+    $("prof-png").onclick = function () { downloadCard(i); };
     var b = $("add-compare");
     if (b) b.onclick = function () { if (state.compare.length < 3 && state.compare.indexOf(i) < 0) { state.compare.push(i); renderCompare(); renderProfile(i); } };
     if (map) map.resize();
@@ -412,6 +482,68 @@
       '<div class="src">1 home = ' + fmtInt(eq.household_kwh_per_year) + " kWh/yr (" + esc(eq.household_source) + "); 1 pool = " +
       fmtInt(eq.olympic_pool_m3) + " m³. Sources: <a href=\"about.html#equivalents\">About</a>.</div></div>";
   }
+
+  // ---- v0.5: "What would a campus here mean?" question cards (facts + everyday equivalents; factors in params.web) -----
+  function pueFor(i, coolKey) {                   // same PUE formula as model.js, for the comparison cooling type
+    var c = params.baseline.cooling_scenarios[coolKey], ov = prep.override[i];
+    return ov !== null && !isNaN(ov) ? ov : c.pue_base + Math.min(Math.max(prep.cddExcess[i] * c.pue_slope_per_1000_cdd, 0), c.pue_max_uplift);
+  }
+  function fmtPct(v) { return v === null || !isFinite(v) ? "–" : v >= 10 ? v.toFixed(0) + "%" : v >= 1 ? v.toFixed(1) + "%" : v.toFixed(2) + "%"; }
+  function signedPct(x) { return (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(0) + "%"; }
+  function fmtBig(v) { return v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + " million" : fmtInt(v); }
+  function qcard(q, rows, caveat) {
+    return '<div class="qcard"><h4>' + esc(q) + "</h4>" + rows.map(function (r) {
+      return '<div class="qrow"><span>' + r[0] + "</span><b>" + r[1] + "</b></div>";
+    }).join("") + (caveat ? '<p class="qcav">' + caveat + "</p>" : "") + "</div>";
+  }
+  function campusQuestions(i) {
+    var o = state.out, s = o.summary.scenario, b = params.baseline, q = params.web.campus_questions, eq = params.web.equivalents;
+    var mw = s.mw, mwh = o.facilityMwh[i], cool = b.cooling_scenarios[s.cooling];
+    var otherKey = s.cooling === "air_evaporative" ? "liquid_dry_coolers" : "air_evaporative";
+    var otherMwh = mw * b.scale.hours_per_year * pueFor(i, otherKey), otherCool = b.cooling_scenarios[otherKey];
+    var onsite = mwh * cool.water_m3_per_mwh, total = onsite + mwh * data.indirect_m3_per_mwh[i];
+    var otherOnsite = otherMwh * otherCool.water_m3_per_mwh, otherTotal = otherOnsite + otherMwh * data.indirect_m3_per_mwh[i];
+    var ps = data.ps_withdrawal_m3[i], cap = data.local_capacity_mw[i], emp = data.employment[i];
+    var p14 = data.state_res_price_2014[i], p24 = data.state_res_price_2024[i];
+    var tCo2 = mwh * prep.co2tPerMwh[i], acres = b.capex.land.acres_per_mw * mw, ops = s.staff * mw / 100;
+    var coolName = function (k) { return k === "air_evaporative" ? "air / evaporative" : "liquid / dry coolers"; };
+    var gridName = data.balancing_authority[i] === "state" ? "state" : data.balancing_authority[i] || "";
+    var html = '<h3 id="campus-q">What would a ' + mw + " MW campus here mean?</h3>" +
+      '<p class="note">Facts and everyday equivalents for one ' + mw + " MW (IT load) campus, " + coolName(s.cooling) +
+      " cooling, running all year. They follow the scenario settings.</p>";
+    html += qcard("Would it raise electricity bills?", [
+      ["Campus electricity, share of regional grid sales" + (gridName ? " (" + esc(gridName) + ")" : ""), fmtPct(o.gridLoadPct[i])],
+      ["Local industrial electricity price", "$" + prep.price[i].toFixed(0) + " /MWh"],
+      ["State residential price, 2014 → 2024", (p14 / 10).toFixed(1) + "¢ → " + (p24 / 10).toFixed(1) + "¢ /kWh (" +
+        signedPct(p24 / p14 - 1) + " nominal; " + signedPct(p24 / p14 / (q.cpi_u[2024] / q.cpi_u[2014]) - 1) + " after inflation)"]],
+      "Context only: these figures do not show the campus's effect on bills, which depends on contracts and utility rate decisions.");
+    html += qcard("Can the grid handle it?", [
+      ["Annual electricity", fmtInt(mwh / 1000) + " GWh ≈ " + fmtBig(mwh * 1000 / eq.household_kwh_per_year) + " US homes"],
+      ["Share of regional grid sales", fmtPct(o.gridLoadPct[i])],
+      ["Peak power vs power plants in the county", cap > 0 ? fmtPct(mw * o.pue[i] / cap * 100) + " of " + fmtInt(cap) + " MW" : "no power plants in the county"]],
+      "Capacity in the county is not the same as grid capacity: power is shared across the regional grid.");
+    html += qcard("How much water?", [
+      ["On-site cooling water per year", fmtBig(onsite) + " m³ ≈ " + fmtInt(onsite / eq.olympic_pool_m3) + " Olympic pools"],
+      ["Including water used at power plants", fmtBig(total) + " m³ ≈ " + fmtInt(total / eq.olympic_pool_m3) + " pools"],
+      ["Share of county public water supply", ps > 0 ? fmtPct(onsite / ps * 100) + " (on-site) · " + fmtPct(total / ps * 100) + " (total)" : "no data"],
+      ["Local water stress (WRI Aqueduct)", waterStressBand(data.bws_score[i])],
+      ["With " + coolName(otherKey) + " cooling instead", fmtBig(otherOnsite) + " m³ on-site · " + fmtBig(otherTotal) + " m³ total"]],
+      "Public-supply comparison uses USGS 2015 withdrawals; power-plant water is used where the electricity is generated, not necessarily in this county.");
+    html += qcard("How much carbon?", [
+      ["CO₂ per year (grid average)", fmtBig(tCo2) + " t ≈ " + fmtBig(tCo2 / q.car_t_co2_per_year) + " passenger cars"],
+      ["CO₂ per 1M AI tokens", o.co2Kg[i].toFixed(3) + " kg"]],
+      "Uses the regional grid's average emission rate (EPA eGRID 2023); a new load's actual effect depends on which plants run more.");
+    html += qcard("How much land?", [
+      ["Site area (model assumption)", fmtInt(acres) + " acres ≈ " + fmtInt(acres / q.football_field_acres) + " football fields"]],
+      "Assumes " + b.capex.land.acres_per_mw + " acre per MW; real campuses vary widely.");
+    html += qcard("What would it bring?", [
+      ["Operations jobs", fmtInt(ops) + " (" + fmtPct(ops / emp * 100) + " of county employment)"],
+      ["Construction-phase jobs (18–24 months)", "≈ " + fmtInt(q.construction_jobs) + " (" + fmtPct(q.construction_jobs / emp * 100) + " of county employment)"]],
+      "Construction estimate from an industry-sponsored report (US Chamber of Commerce, 2017), including indirect jobs; operations staffing is a model assumption.");
+    html += '<p class="note qnot">' + esc(q.not_covered) + "</p>";
+    return html;
+  }
+
   function kpi(k, v, s) { return '<div class="kpi"><div class="k">' + k + '</div><div class="v">' + v + '</div><div class="s">' + s + "</div></div>"; }
 
   function renderCompare() {
@@ -422,7 +554,7 @@
       ["10-year cost", function (i) { return fmtMoney(o.tco[i]); }],
       ["Cost Index", function (i) { return o.costIndex[i].toFixed(1); }],
       ["Percentile (0 = cheapest)", function (i) { return o.percentile[i].toFixed(0); }],
-      ["Uncertainty 5–95% (baseline)", function (i) { return data.mc_rank_p5[i].toFixed(0) + "–" + data.mc_rank_p95[i].toFixed(0); }],
+      ["Uncertainty 5–95%", function (i) { return isBaseline() ? data.mc_rank_p5[i].toFixed(0) + "–" + data.mc_rank_p95[i].toFixed(0) : "baseline scenario only"; }],
       ["PUE", function (i) { return o.pue[i].toFixed(2); }],
       ["Electricity price ($/MWh)", function (i) { return prep.price[i].toFixed(0); }],
       ["CapEx", function (i) { return fmtMoney(o.capex[i]); }],
@@ -459,6 +591,7 @@
     if (i !== null) {
       map.setFeatureState({ source: "counties", id: +data.fips[i] }, { selected: true });
       renderProfile(i);
+      writeHash();
     }
   }
 
@@ -510,6 +643,8 @@
     };
     bindSearch();
     $("download-scenario").onclick = downloadScenario;
+    $("copy-link").onclick = copyLink;
+    $("download-map").onclick = downloadMap;
     $("toggle-controls").onclick = function () {
       var c = $("controls"), open = !c.classList.contains("open");
       c.classList.toggle("open", open); this.setAttribute("aria-expanded", open);
@@ -539,6 +674,157 @@
     a.download = "compute_cost_atlas_" + s.mw + "MW_" + s.cooling + "_carbon" + s.carbonPrice + ".csv";
     a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+
+
+  // ---- v0.5: share, guide, footer, image export --------------------------------------------------------------------
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast.timer); toast.timer = setTimeout(function () { t.hidden = true; }, 2200);
+  }
+  function copyLink() {
+    writeHash();
+    var url = location.href;
+    var done = function () { toast("Link copied: it opens this exact view"); };
+    var fallback = function () {
+      var ta = document.createElement("textarea"); ta.value = url; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { window.prompt("Copy this link:", url); }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(done, fallback); else fallback();
+  }
+  var GUIDE_KEY = "cca_start_here_seen_v1";
+  function setupGuide() {
+    var seen = false;
+    try { seen = localStorage.getItem(GUIDE_KEY) === "1"; } catch (e) { seen = false; }   // storage may be blocked
+    if (!seen && !/(^|&)county=/.test(location.hash.slice(1))) $("guide").hidden = false;
+    $("guide-ok").onclick = function () {
+      $("guide").hidden = true;
+      try { localStorage.setItem(GUIDE_KEY, "1"); } catch (e) { /* not remembered; harmless */ }
+      $("search").focus();
+    };
+    $("open-guide").onclick = function () { $("guide").hidden = false; $("guide-ok").focus(); };
+  }
+  function renderFooter() {
+    var w = params.web.site;
+    $("site-footer").innerHTML = "<p><b>Compute Cost Atlas</b> · preview v" + esc(w.version) + " · last updated " + esc(w.last_updated) + "</p>" +
+      "<p>Cite as: " + esc(w.citation) + "</p>" +
+      '<p><a href="' + esc(w.feedback_url) + '" target="_blank" rel="noopener">Feedback and issues (GitHub)</a> · <a href="about.html">About &amp; methods</a></p>';
+  }
+
+  /* PNG export: the map canvas plus a title, the current legend and the attribution, drawn with the 2D canvas API. */
+  function scenarioLine() {
+    var s = state.scenario;
+    return s.mw + " MW · " + (s.cooling === "air_evaporative" ? "air cooling" : "liquid cooling") + " · carbon $" + s.carbonPrice +
+      "/t · water surcharge " + Math.round(s.surchargeMax * 100) + "% · open-weight share " + Math.round(s.openShare * 100) + "%";
+  }
+  function drawLegend(ctx, x, y, w) {
+    var m = activeDef();
+    ctx.fillStyle = "#1f1f1f"; ctx.font = "600 13px system-ui, sans-serif"; ctx.fillText(m.label, x, y); y += 10;
+    if (m.pending) { ctx.font = "12px system-ui, sans-serif"; ctx.fillText("2026 results pending certification (no data shown)", x, y + 14); return y + 24; }
+    if (m.kind === "cat") {
+      ctx.font = "12px system-ui, sans-serif";
+      var keys = Object.keys(DRIVER_COLORS), col = 0;
+      keys.forEach(function (k, n) {
+        var cx = x + (n % 2) * (w / 2), cy = y + 6 + Math.floor(n / 2) * 18;
+        ctx.fillStyle = DRIVER_COLORS[k]; ctx.fillRect(cx, cy, 10, 10);
+        ctx.fillStyle = lighten(DRIVER_COLORS[k], 0.55); ctx.fillRect(cx + 11, cy, 10, 10);
+        ctx.fillStyle = "#1f1f1f"; ctx.fillText(k, cx + 26, cy + 9); col = cy;
+      });
+      ctx.fillStyle = "#555"; ctx.fillText("dark = raises cost, light = lowers cost (vs national median)", x, col + 30);
+      return col + 40;
+    }
+    if (m.kind === "bivar") {
+      for (var r = 0; r < 3; r++) for (var q = 0; q < 3; q++) { ctx.fillStyle = BIVAR[2 - r][q]; ctx.fillRect(x + q * 17, y + 6 + r * 17, 16, 16); }
+      ctx.fillStyle = "#1f1f1f"; ctx.font = "12px system-ui, sans-serif";
+      ctx.fillText("→ facility cost (national thirds)", x + 60, y + 52); ctx.fillText("↑ " + m.yName + " per 1M tokens", x + 60, y + 20);
+      return y + 66;
+    }
+    var d = state.domain, g = ctx.createLinearGradient(x, 0, x + w, 0);
+    d.ramp.forEach(function (c, k) { g.addColorStop(k / (d.ramp.length - 1), c); });
+    ctx.fillStyle = g; ctx.fillRect(x, y + 4, w, 12);
+    ctx.fillStyle = "#333"; ctx.font = "12px system-ui, sans-serif";
+    ctx.textAlign = "left"; ctx.fillText(m.tick(d.lo), x, y + 32);
+    ctx.textAlign = "right"; ctx.fillText(m.tick(d.hi), x + w, y + 32);
+    if (d.kind === "div") { ctx.textAlign = "center"; ctx.fillText(m.tick(d.center) + " (median)", x + w / 2, y + 32); }
+    ctx.textAlign = "left";
+    return y + 44;
+  }
+  function wrapText(ctx, text, x, y, maxW, lineH) {   // returns the y after the last line
+    var words = text.split(" "), line = "";
+    words.forEach(function (w) {
+      var t = line ? line + " " + w : w;
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lineH; line = w; } else line = t;
+    });
+    if (line) { ctx.fillText(line, x, y); y += lineH; }
+    return y;
+  }
+  function savePng(canvas, name) {
+    canvas.toBlob(function (b) {
+      var a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1500);
+    }, "image/png");
+  }
+  function downloadMap() {
+    map.once("render", function () {
+      var src = map.getCanvas(), dpr = src.width / src.clientWidth, W = src.clientWidth, H = src.clientHeight, pad = 16;
+      var out = document.createElement("canvas"); out.width = (W) * dpr; out.height = (H + 190) * dpr;
+      var ctx = out.getContext("2d"); ctx.scale(dpr, dpr);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H + 190);
+      ctx.fillStyle = "#1f1f1f"; ctx.font = "700 16px system-ui, sans-serif"; ctx.fillText("Compute Cost Atlas (preview)", pad, 24);
+      ctx.font = "12px system-ui, sans-serif"; ctx.fillStyle = "#555"; wrapText(ctx, scenarioLine(), pad, 42, W - 2 * pad, 14);
+      ctx.drawImage(src, 0, 0, src.width, src.height, 0, 52, W, H - 4);
+      var y = drawLegend(ctx, pad, H + 66, Math.min(360, W - 2 * pad));
+      ctx.fillStyle = "#666"; ctx.font = "10.5px system-ui, sans-serif";
+      var ya = wrapText(ctx, "Boundaries: US Census Bureau · Basemap: Natural Earth · Data centers: PNNL IM3, © OpenStreetMap contributors (ODbL) · Frontier campuses: Epoch AI (CC BY 4.0)",
+                        pad, Math.max(y + 8, H + 116), W - 2 * pad, 14);
+      wrapText(ctx, params.web.site.citation + " Costs exclude IT hardware. Not a siting recommendation.", pad, ya, W - 2 * pad, 14);
+      savePng(out, "compute_cost_atlas_map.png");
+    });
+    map.triggerRepaint();
+  }
+  function downloadCard(i) {
+    var o = state.out, d = o.driver[i], W = 520, rows = [
+      ["10-year cost (excl. IT hardware)", "$" + (o.tco[i] / 1e9).toFixed(2) + " bn"],
+      ["Cost Index (median = 50)", o.costIndex[i].toFixed(1) + " · percentile " + o.percentile[i].toFixed(0)],
+      ["Main driver", d.driver + " (" + (d.side === "more expensive" ? "raises" : "lowers") + " cost)"],
+      ["Price per 1M tokens (cost-based)", "$" + o.priceL1[i].toFixed(2) + " (" + pctVsMedian(o.priceL1[i]) + ")"],
+      ["CO₂ per 1M tokens", o.co2Kg[i].toFixed(3) + " kg"],
+      ["Scarcity-weighted water per 1M tokens", o.waterSwL[i].toFixed(2) + " L-eq"],
+      ["Electricity price (industrial)", "$" + prep.price[i].toFixed(0) + " /MWh"],
+      ["Water stress", waterStressBand(data.bws_score[i])],
+      ["Campus electricity, % of regional grid sales", fmtPct(o.gridLoadPct[i])],
+      ["Data centers / frontier AI campuses", data.n_dc_pnnl[i] + " / " + data.n_epoch[i]]];
+    var meas = document.createElement("canvas").getContext("2d");
+    meas.font = "12px system-ui, sans-serif";
+    var sub = "Population " + fmtInt(data.population[i]) + " · " + scenarioLine();
+    var nSub = 1, line = "";
+    sub.split(" ").forEach(function (w) { var t = line ? line + " " + w : w; if (meas.measureText(t).width > W - 40 && line) { nSub++; line = w; } else line = t; });
+    var dy = (nSub - 1) * 16;                           // extra height for wrapped subtitle lines
+    var H = 120 + dy + rows.length * 26 + 70, dpr = 2, c = document.createElement("canvas");
+    c.width = W * dpr; c.height = H * dpr;
+    var ctx = c.getContext("2d"); ctx.scale(dpr, dpr);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#1f1f1f"; ctx.font = "700 20px system-ui, sans-serif"; ctx.fillText(data.name[i] + ", " + data.state[i], 20, 36);
+    ctx.font = "12px system-ui, sans-serif"; ctx.fillStyle = "#555";
+    wrapText(ctx, sub, 20, 56, W - 40, 16);
+    var g = ctx.createLinearGradient(20, 0, W - 20, 0);
+    DIVERGING.forEach(function (col, k) { g.addColorStop(k / (DIVERGING.length - 1), col); });
+    ctx.fillStyle = g; ctx.fillRect(20, 72 + dy, W - 40, 8);
+    var mx = 20 + (W - 40) * o.percentile[i] / 100;
+    ctx.fillStyle = "#1f1f1f"; ctx.fillRect(mx - 1.5, 67 + dy, 3, 18);
+    ctx.font = "11px system-ui, sans-serif"; ctx.fillStyle = "#666"; ctx.fillText("cheapest", 20, 98 + dy);
+    ctx.textAlign = "right"; ctx.fillText("most expensive", W - 20, 98 + dy); ctx.textAlign = "left";
+    rows.forEach(function (r, k) {
+      var y = 128 + dy + k * 26;
+      ctx.fillStyle = "#555"; ctx.font = "13px system-ui, sans-serif"; ctx.fillText(r[0], 20, y);
+      ctx.fillStyle = "#1f1f1f"; ctx.font = "600 13px system-ui, sans-serif"; ctx.textAlign = "right"; ctx.fillText(r[1], W - 20, y);
+      ctx.textAlign = "left"; ctx.fillStyle = "#eee"; ctx.fillRect(20, y + 8, W - 40, 1);
+    });
+    ctx.fillStyle = "#666"; ctx.font = "11px system-ui, sans-serif";
+    ctx.fillText("Compute Cost Atlas, preview v" + params.web.site.version + " · descriptive, not a siting recommendation", 20, H - 34);
+    ctx.fillText(params.web.site.citation, 20, H - 18);
+    savePng(c, "compute_cost_atlas_" + data.fips[i] + ".png");
   }
 
   // ---- search (local type-ahead over county + state names; no geocoder) ------------------------------------------------
@@ -596,7 +882,7 @@
   }
   function zoomTo(i) {
     var bb = countyBBox[data.fips[i]];
-    if (bb && map) map.fitBounds(bb, { padding: 60, maxZoom: 8, duration: 800 });
+    if (bb && map) map.fitBounds(bb, { padding: 60, maxZoom: 6.5, duration: 800 });   // keep neighbours in view
   }
   function bindSearch() {
     var input = $("search");
@@ -775,7 +1061,7 @@
       updateCities();
       map.on("moveend", updateCities);
       if (state.extrude) setExtrude(true);
-      if (state.pendingCounty !== undefined) { select(state.pendingCounty); }
+      if (state.pendingCounty !== undefined) { select(state.pendingCounty); zoomTo(state.pendingCounty); }   // shared link
       var collapseAttrib = function () {                   // keep the attribution collapsed (the "i" button) on phones
         var at = document.querySelector(".maplibregl-ctrl-attrib");
         if (at && window.innerWidth < 860) at.classList.remove("maplibregl-compact-show");
@@ -783,30 +1069,82 @@
       collapseAttrib();
       window.addEventListener("resize", collapseAttrib);
 
-      var tip = $("tooltip");
-      map.on("mousemove", function (e) {
-        var f = map.queryRenderedFeatures(e.point, { layers: ["epoch-op", "epoch-planned", "dc-pnnl", "county-fill"] })[0];
-        if (!f) { tip.hidden = true; setHover(null); return; }
-        if (f.layer.id === "county-fill") {
-          var i = fipsIndex[String(f.id).padStart(5, "0")];
-          setHover(f.id);
-          tip.innerHTML = "<b>" + esc(data.name[i]) + ", " + esc(data.state[i]) + "</b><span class=v>" + esc(tooltipValue(i)) +
-            "</span><br><span class=v>Cost Index " + state.out.costIndex[i].toFixed(1) + "</span>";
-        } else {
-          setHover(null);
-          var p = f.properties;
-          tip.innerHTML = f.layer.id === "dc-pnnl" ? "<b>Data center</b>" + esc(p.operator || "operator unknown") + "<br>" + esc(p["class"]) +
-            "<br><small>PNNL IM3 / © OSM contributors</small>" :
-            "<b>" + esc(p.name) + "</b>" + esc(p.owner) + "<br>" + (p.status === "operating" ? Math.round(p.mw) + " MW operating" : "planned") +
-            "<br><small>Epoch AI (CC BY 4.0)</small>";
+      var tip = $("tooltip"), lastTip = null, touch = window.matchMedia("(hover: none)").matches, tapped = null;
+      function placeTip(pt) {                     // beside the cursor, never under it, never off the map edges
+        var W = map.getContainer().clientWidth, H = map.getContainer().clientHeight, w = tip.offsetWidth, h = tip.offsetHeight, g = 16;
+        var x = pt.x + g + w > W - 4 ? pt.x - g - w : pt.x + g;
+        var y = pt.y + g + h > H - 4 ? pt.y - g - h : pt.y + g;
+        tip.style.left = Math.max(4, x) + "px";
+        tip.style.top = Math.max(4, Math.min(y, H - h - 4)) + "px";
+      }
+      function showCounty(i, docked) {
+        var key = i + "|" + (docked ? 1 : 0) + "|" + state.metric + "|" + state.diff + "|" + state.voteMode;
+        if (key !== lastTip) {                    // rebuild only when the county (or layer) changes
+          tip.innerHTML = tooltipCard(i, docked);
+          tip.className = "tooltip tc" + (docked ? " docked" : "");
+          lastTip = key;
+          if (docked) {
+            $("tc-open").onclick = function () { tip.hidden = true; lastTip = null; tapped = null; select(i); writeHash(); };
+            $("tc-close").onclick = function () { tip.hidden = true; lastTip = null; tapped = null; };
+          }
         }
-        tip.style.left = Math.min(e.point.x + 14, map.getContainer().clientWidth - 250) + "px";
-        tip.style.top = (e.point.y + 14) + "px";
         tip.hidden = false;
+        if (docked) { tip.style.left = ""; tip.style.top = ""; }
+      }
+      var pendingMove = null;
+      map.on("mousemove", function (e) {
+        if (touch) return;
+        if (pendingMove) { pendingMove.point = e.point; return; }
+        pendingMove = { point: e.point };
+        requestAnimationFrame(function () {       // at most one query per frame: no lag when sweeping across counties
+          var pt = pendingMove.point; pendingMove = null;
+          var f = map.queryRenderedFeatures(pt, { layers: ["epoch-op", "epoch-planned", "dc-pnnl", "county-fill"] })[0];
+          if (!f) { tip.hidden = true; lastTip = null; setHover(null); return; }
+          if (f.layer.id === "county-fill") {
+            var i = fipsIndex[String(f.id).padStart(5, "0")];
+            setHover(f.id);
+            showCounty(i, false);
+          } else {
+            setHover(null);
+            var p = f.properties;
+            tip.className = "tooltip";
+            lastTip = null;
+            tip.innerHTML = f.layer.id === "dc-pnnl" ? "<b>Data center</b>" + esc(p.operator || "operator unknown") + "<br>" + esc(p["class"]) +
+              "<br><small>PNNL IM3 / © OSM contributors</small>" :
+              "<b>" + esc(p.name) + "</b>" + esc(p.owner) + "<br>" + (p.status === "operating" ? Math.round(p.mw) + " MW operating" : "planned") +
+              "<br><small>Epoch AI (CC BY 4.0)</small>";
+            tip.hidden = false;
+          }
+          placeTip(pt);
+        });
       });
-      map.on("mouseleave", "county-fill", function () { tip.hidden = true; setHover(null); });
-      map.on("click", "county-fill", function (e) { select(fipsIndex[String(e.features[0].id).padStart(5, "0")]); writeHash(); });
+      map.getCanvas().addEventListener("mouseleave", function () { if (!touch) { tip.hidden = true; lastTip = null; setHover(null); } });
+      map.on("click", "county-fill", function (e) {
+        var i = fipsIndex[String(e.features[0].id).padStart(5, "0")];
+        if (touch && tapped !== i) {              // phone: first tap shows the card docked at the bottom
+          tapped = i; setHover(e.features[0].id); showCounty(i, true);
+          var H = map.getContainer().clientHeight, free = H - tip.offsetHeight - 40;   // keep the county visible above the card
+          if (e.point.y > free - 20) map.panBy([0, e.point.y - free / 2], { duration: 300 });
+          return;
+        }
+        tapped = null; tip.hidden = true; lastTip = null;
+        select(i); writeHash();
+      });
       map.on("mouseenter", "county-fill", function () { map.getCanvas().style.cursor = "pointer"; });
+      window.atlas.pointOf = function (fips) {   // page position of a pixel inside the county (tests / screenshots)
+        var bb = countyBBox[fips], a = map.project(bb[0]), b = map.project(bb[1]), r = map.getCanvas().getBoundingClientRect();
+        var cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, best = null;
+        for (var k = 0; k <= 12 && !best; k++) for (var dx = -k; dx <= k && !best; dx++) for (var dy = -k; dy <= k && !best; dy++) {
+          var p = [cx + dx * Math.abs(b.x - a.x) / 26, cy + dy * Math.abs(b.y - a.y) / 26];
+          var f = map.queryRenderedFeatures(p, { layers: ["county-fill"] })[0];
+          if (f && String(f.id).padStart(5, "0") === fips) best = p;
+        }
+        best = best || [cx, cy];
+        return { x: r.left + best[0], y: r.top + best[1] };
+      };
+      window.atlas.map = map;                     // for tests (timing, placement)
+      window.atlas.card = tooltipCard;
+      window.atlas.tapCounty = function (fips) { tapped = fipsIndex[fips]; showCounty(tapped, true); };
       document.body.dataset.ready = "1";             // for headless screenshots
     });
   }
@@ -837,6 +1175,8 @@
     renderSummary();
     bindControls();
     bindViewControls();
+    renderFooter();
+    setupGuide();
     buildCities(res[9]);
     buildMap(res[2], res[3], res[4], res[5], res[6], res[7], res[8]);
     window.atlas = { state: state, select: function (fips) { select(fipsIndex[fips]); }, compare: function (list) {

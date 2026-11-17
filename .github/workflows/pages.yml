@@ -20,12 +20,12 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04            # pinned runner image
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/checkout@v7               # Node 24
+      - uses: actions/configure-pages@v6        # Node 24
+      - uses: actions/upload-pages-artifact@v5  # uses upload-artifact v7 (Node 24); dotfiles excluded (none needed)
         with:
           path: web
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5           # Node 24

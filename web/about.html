@@ -21,7 +21,7 @@
   <a class="skip" href="#main">Skip to content</a>
   <div class="preview-banner" role="note">Preview — not yet officially released. Numbers are provisional and may change.</div>
   <header class="topbar">
-    <div class="brand"><strong>Compute Cost Atlas</strong><span class="tag">prototype v0.3</span></div>
+    <div class="brand"><strong>Compute Cost Atlas</strong><span class="tag">preview v0.5</span></div>
     <nav><a href="index.html">Map</a><a href="about.html" aria-current="page">About</a></nav>
   </header>
   <main class="doc" id="main">
@@ -32,7 +32,7 @@
       not be built.</p>
     <p class="box"><b>Disclaimer.</b> Descriptive information, not a siting recommendation; associations are not causal
       effects.</p>
-    <p class="box">Research prototype (v0.3), accompanying a working paper on where AI is not born equally: the cost of AI data centers across U.S. counties All parameters are provisional and under
+    <p class="box">Research preview (v0.5.1), accompanying a working paper on where AI is not born equally: the cost of AI data centers across U.S. counties All parameters are provisional and under
       review. Numbers may change.</p>
 
     <h2 id="what">What the map shows</h2>
@@ -114,6 +114,18 @@
         residential customer in 2024 (U.S. Energy Information Administration, Form EIA-861 2024: residential sales ÷
         residential customers. The same calculation gives 10,791 kWh for 2022, the value in EIA's FAQ
         <a href="https://www.eia.gov/tools/faqs/faq.php?id=97&amp;t=3">"How much electricity does an American home use?"</a>).</li>
+      <li><b>Passenger cars</b>: annual CO₂ of the campus ÷ 4.6 t, the CO₂ of a typical passenger vehicle per year
+        (US EPA, <a href="https://www.epa.gov/energy/greenhouse-gas-equivalencies-calculator">Greenhouse Gas Equivalencies Calculator</a>).</li>
+      <li><b>Football fields</b>: site acres ÷ 1.32 acres, an American football field including end zones (360 × 160 ft).</li>
+      <li><b>State residential electricity price</b>, 2014 and 2024: all residential revenue ÷ residential sales by state (US EIA
+        Form 861). Shown in nominal dollars and after inflation, using the US Bureau of Labor Statistics consumer price index
+        (CPI-U, all items, US city average, annual averages: 236.736 in 2014 and 313.689 in 2024, a rise of 32.5%). Nationally the
+        residential price rose 32% in nominal terms and fell about 1% after inflation. Shown as context only; it does not measure
+        any campus's effect on bills.</li>
+      <li><b>Jobs</b>: operations staff is a model assumption (100 per 100 MW, scaled with size). Construction-phase jobs (about
+        1,688 local jobs over 18–24 months, including indirect jobs) come from an industry-sponsored report: US Chamber of Commerce
+        Technology Engagement Center (2017), <em>Data Centers: Jobs and Opportunities in Communities Nationwide</em>.</li>
+      <li><b>Water supply comparison</b>: USGS county public-supply withdrawals, 2015 (latest county release).</li>
       <li><b>Olympic pools</b>: annual water ÷ 2,500 m³, the volume of a nominal Olympic pool (50 m × 25 m × 2 m).
         Shown for on-site cooling water and for on-site plus power-plant water.</li>
     </ul>
@@ -136,6 +148,7 @@
       <tr><td>Natural Earth (1:50m land, lakes, country borders; 1:10m populated places)</td><td>Basemap context, city labels</td><td>Public domain</td></tr>
       <tr><td>Census SAIPE 2023; FEMA National Risk Index (social vulnerability)</td><td>Context layers</td><td>Public domain</td></tr>
       <tr><td>MIT Election Data and Science Lab, county presidential returns 2024</td><td>Context layer (information only)</td><td>Harvard Dataverse; licence to be verified</td></tr>
+      <tr><td>US BLS consumer price index (CPI-U, annual averages 2014, 2024)</td><td>Inflation adjustment of residential prices</td><td>Public domain</td></tr>
       <tr><td>US EIA Form 861 2024 (average household use)</td><td>"US homes" equivalent</td><td>Public domain</td></tr>
       <tr><td>US Census Bureau (county boundaries 2025; population, ACS 2023)</td><td>Map, population</td><td>Public domain</td></tr>
       <tr><td>US EIA (Form 861 electricity sales 2022–24; Form 860 generators 2024)</td><td>Electricity price, power-plant cooling</td><td>Public domain</td></tr>
@@ -155,6 +168,12 @@
       atlas are in a separate file, <a href="data/counties_pnnl_odbl.csv" download>counties_pnnl_odbl.csv</a>, under the
       Open Database Licence (ODbL 1.0): keep the attribution "© OpenStreetMap contributors" and the ODbL terms when you
       redistribute it. Frontier-campus counts come from Epoch AI (CC BY 4.0; credit Epoch AI).</p>
+
+    <h2 id="cite">Version, citation and feedback</h2>
+    <p>Compute Cost Atlas, <b>preview v0.5.1</b>, last updated 2026-11-17.</p>
+    <p><b>Suggested citation:</b> Li, W. &amp; Urban Information Lab, UT Austin. Compute Cost Atlas, preview v0.5.1, 2026.</p>
+    <p><b>Feedback:</b> please open an issue on <a href="https://github.com/Umich-wanqili/compute-cost-atlas/issues">GitHub Issues</a>.</p>
+    <p>Not covered by this atlas: noise, tax revenue and local decision-making.</p>
 
     <h2 id="method">Method in brief</h2>
     <p>For each county: construction cost per MW, adjusted for local construction wages, plus land, a hazard allowance and a
