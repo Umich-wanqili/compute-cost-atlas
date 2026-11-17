@@ -238,3 +238,6 @@ input[type=range]:focus-visible { outline-offset: 4px; }
 .prof-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .nav-btn .short { display: none; }
 @media (max-width: 520px) { .nav-btn .long { display: none; } .nav-btn .short { display: inline; } }
+/* v0.5.2: desktop hover card is information only (follows the cursor; the county itself is the click target) */
+.tooltip.tc:not(.docked) { pointer-events: none; }
+.tc-foot.hint { color: var(--ink-3); }

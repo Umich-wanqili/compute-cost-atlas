@@ -355,7 +355,7 @@
       }).join("") + "</div>" +
       (flags.length ? '<div class="tc-flag">ⓘ estimated inputs (' + flags.length + ")</div>" : "") +
       (docked ? '<div class="tc-foot"><button class="btn" id="tc-open">Full profile</button><button class="tc-x" id="tc-close" aria-label="Close">×</button></div>'
-              : '<div class="tc-foot">Click for full profile →</div>');
+              : '<div class="tc-foot hint">Click the county for full profile</div>');
   }
 
   function tooltipValue(i) {
